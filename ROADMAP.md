@@ -20,24 +20,24 @@ This document outlines the development phases and goals for the project.
 - [x] Anonymize unstructured text
 - [x] Generate sentiment scores (VADER, TextBlob, etc.)
 - [x] Extract emotion categories (e.g., joy, fear, trust)
-- [ ] Engineer career progression and team metrics
+- [x] Engineer career progression and team metrics
 
 ---
 
 ## Phase 3: Modeling 🔄
 
-- [ ] Baseline churn models (LogReg, Random Forest, XGBoost)
-- [ ] NLP-only model (e.g., sentiment-based)
-- [ ] Combined model (structured + text)
-- [ ] Evaluate using AUC, F1, Precision@TopK
-- [ ] Track experiments with MLflow or Weights & Biases
+- [x] Baseline churn models (LogReg, Random Forest, XGBoost)
+- [x] NLP-only model (e.g., sentiment-based)
+- [x] Combined model (structured + text)
+- [x] Evaluate using AUC, F1, Precision@TopK
+- [x] Track experiments with MLflow or Weights & Biases
 
 ---
 
 ## Phase 4: Explainability & Risk Scoring 🧠
 
-- [ ] Add SHAP explanations per prediction
-- [ ] Score employees weekly based on latest inputs
+- [x] Add SHAP explanations per prediction
+- [x] Score employees weekly based on latest inputs
 - [ ] Build ranking dashboard of at-risk individuals
 
 ---
