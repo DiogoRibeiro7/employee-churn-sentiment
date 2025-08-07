@@ -8,7 +8,8 @@ from .train import (
 )
 from .track import log_experiment
 from .explain import explain_with_shap
-from .predict import score_employees_weekly
+
+from .predict import export_scores_csv, score_employees_weekly
 from .dashboard import build_risk_dashboard
 
 __all__ = [
@@ -19,5 +20,6 @@ __all__ = [
     "log_experiment",
     "explain_with_shap",
     "score_employees_weekly",
+    "export_scores_csv",
     "build_risk_dashboard",
 ]

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from pathlib import Path
+from typing import Any, Union
 
 import pandas as pd
 
@@ -51,3 +52,36 @@ def score_employees_weekly(
             "churn_risk": proba,
         }
     )
+
+
+def export_scores_csv(
+    model: Any,
+    df: pd.DataFrame,
+    id_column: str,
+    date_column: str,
+    path: Union[str, Path],
+) -> pd.DataFrame:
+    """Score employees weekly and export churn risk scores to CSV.
+
+    This helper computes weekly churn probabilities using
+    :func:`score_employees_weekly` and writes the resulting dataframe to
+    *path*. The directory hierarchy is created if it does not already exist.
+
+    Args:
+        model: Fitted classifier implementing ``predict_proba``.
+        df: Dataframe with employee features, identifiers and dates.
+        id_column: Name of the column uniquely identifying employees.
+        date_column: Name of the column containing date information.
+        path: Destination file path for the CSV output.
+
+    Returns:
+        The scored dataframe written to disk.
+    """
+
+    scores = score_employees_weekly(model, df, id_column, date_column)
+    scores = scores.copy()
+    scores["week_start"] = scores["week_start"].dt.strftime("%Y-%m-%d")
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    scores.to_csv(output_path, index=False)
+    return scores

@@ -45,7 +45,7 @@ This document outlines the development phases and goals for the project.
 ## Phase 5: Deployment & Monitoring 🚀
 
  - [x] Create Streamlit or web-based dashboard for HR
- - [ ] Export scores via API endpoint or CSV
+ - [x] Export scores via API endpoint or CSV
  - [ ] Monitor performance drift and model calibration
  - [ ] Set alert thresholds for high-risk scores
 
