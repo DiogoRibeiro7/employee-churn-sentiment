@@ -38,7 +38,7 @@ This document outlines the development phases and goals for the project.
 
 - [x] Add SHAP explanations per prediction
 - [x] Score employees weekly based on latest inputs
-- [ ] Build ranking dashboard of at-risk individuals
+- [x] Build ranking dashboard of at-risk individuals
 
 ---
 

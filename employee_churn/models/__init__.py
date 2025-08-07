@@ -9,6 +9,7 @@ from .train import (
 from .track import log_experiment
 from .explain import explain_with_shap
 from .predict import score_employees_weekly
+from .dashboard import build_risk_dashboard
 
 __all__ = [
     "train_baseline_models",
@@ -18,4 +19,5 @@ __all__ = [
     "log_experiment",
     "explain_with_shap",
     "score_employees_weekly",
+    "build_risk_dashboard",
 ]
