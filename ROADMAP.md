@@ -16,10 +16,10 @@ This document outlines the development phases and goals for the project.
 
 ## Phase 2: Data Preprocessing & Feature Engineering 🚧
 
-- [ ] Clean and standardize HR fields
-- [ ] Anonymize unstructured text
-- [ ] Generate sentiment scores (VADER, TextBlob, etc.)
-- [ ] Extract emotion categories (e.g., joy, fear, trust)
+- [x] Clean and standardize HR fields
+- [x] Anonymize unstructured text
+- [x] Generate sentiment scores (VADER, TextBlob, etc.)
+- [x] Extract emotion categories (e.g., joy, fear, trust)
 - [ ] Engineer career progression and team metrics
 
 ---
