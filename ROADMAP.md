@@ -51,8 +51,24 @@ This document outlines the development phases and goals for the project.
 
 ---
 
+## Phase 6: ML Rigor & Feature Depth ✅
+
+- [x] Reproducible synthetic dataset generator for examples and tests
+- [x] Richer structured features (tenure bands, promotion velocity, peer-relative compensation)
+- [x] Shape-based text-statistics features
+- [x] Plutchik eight-emotion lexicon with intensity, polarity, and dominant emotion
+- [x] Expanded model zoo (gradient boosting, hist gradient boosting)
+- [x] Stratified cross-validation and randomized hyperparameter tuning
+- [x] Probability calibration with before/after reliability metrics
+- [x] Group fairness diagnostics (selection parity, equal opportunity, four-fifths rule)
+- [x] End-to-end runnable walkthrough notebook
+
+---
+
 ## Future Enhancements ✨
 
 - Add temporal models for event streams (e.g., LSTM, Transformer)
 - Integrate passive sentiment from internal chat (with consent)
 - Build personalized retention recommendation engine
+- Transformer-based sentiment/emotion models as an optional backend
+- FastAPI scoring endpoint for real-time predictions

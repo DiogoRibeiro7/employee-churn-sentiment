@@ -36,4 +36,4 @@ jobs:
         run: poetry run black --check .
 
       - name: Run tests
-        run: poetry run pytest tests/test_models tests/test_scripts
+        run: poetry run pytest tests
