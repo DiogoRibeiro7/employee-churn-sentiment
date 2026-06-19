@@ -1,0 +1,17 @@
+# Data schema and filesystem layout.
+# Paths are resolved relative to the project root unless absolute.
+paths:
+  data_dir: data
+  raw_dir: data/raw
+  processed_dir: data/processed
+  artifacts_dir: models/artifacts
+  outputs_dir: outputs
+
+data:
+  id_column: employee_id
+  date_column: snapshot_date
+  target_column: churned
+  text_column: feedback
+  required_columns:
+    - employee_id
+    - hire_date

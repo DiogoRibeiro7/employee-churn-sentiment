@@ -46,6 +46,31 @@ employee-churn-sentiment/
 poetry install
 ```
 
+## Configuration
+
+Settings live in [configs/](configs/) (`model_config.yaml`, `data_config.yaml`,
+`logging_config.yaml`) and are loaded and validated through
+[employee_churn/config.py](employee_churn/config.py):
+
+```python
+from employee_churn import load_config
+
+cfg = load_config()
+cfg.model.random_state   # 0
+cfg.data.target_column   # "churned"
+```
+
+Any value can be overridden by an environment variable using the
+`ECS_<SECTION>__<KEY>` convention (values are parsed as YAML):
+
+```bash
+export ECS_MODEL__RANDOM_STATE=123
+export ECS_MODEL__CALIBRATION_METHOD=sigmoid
+```
+
+Copy [.env.example](.env.example) to `.env` for a local, file-based override
+layer (real environment variables always take precedence).
+
 ## Main Workflows
 
 Train and save a baseline artifact:

@@ -9,6 +9,7 @@ venv/
 env/
 .env
 .env.*
+!.env.example
 
 # Test and coverage artifacts
 .pytest_cache/

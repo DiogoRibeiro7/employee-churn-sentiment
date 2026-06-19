@@ -1,0 +1,11 @@
+# Model training and evaluation settings.
+# Override any value with an environment variable, e.g.
+#   ECS_MODEL__RANDOM_STATE=123
+model:
+  model_name: log_reg          # log_reg | random_forest | gradient_boosting | hist_gradient_boosting | xgboost
+  test_size: 0.2
+  random_state: 0
+  top_k: 10
+  cv_folds: 5
+  tuning_iterations: 10
+  calibration_method: isotonic # isotonic | sigmoid
