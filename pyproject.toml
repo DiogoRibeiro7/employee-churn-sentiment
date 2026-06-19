@@ -2,7 +2,7 @@
 name = "employee-churn-sentiment"
 version = "0.1.0"
 description = "Employee churn prediction using HR data and sentiment analysis"
-authors = ["Your Name <your@email.com>"]
+authors = ["Diogo Ribeiro <diogo_dj@hotmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]

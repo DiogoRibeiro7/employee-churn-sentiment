@@ -33,9 +33,7 @@ def _prepare_feature_frame(
         X = prepared.drop(columns=[target_column])
     X = X.select_dtypes(include=["number", "bool"])
     identifier_columns = [
-        column
-        for column in X.columns
-        if column == "id" or column.endswith("_id")
+        column for column in X.columns if column == "id" or column.endswith("_id")
     ]
     if identifier_columns:
         X = X.drop(columns=identifier_columns)
