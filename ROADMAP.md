@@ -46,8 +46,8 @@ This document outlines the development phases and goals for the project.
 
  - [x] Create Streamlit or web-based dashboard for HR
  - [x] Export scores via API endpoint or CSV
- - [ ] Monitor performance drift and model calibration
- - [ ] Set alert thresholds for high-risk scores
+ - [x] Monitor performance drift and model calibration
+ - [x] Set alert thresholds for high-risk scores
 
 ---
 

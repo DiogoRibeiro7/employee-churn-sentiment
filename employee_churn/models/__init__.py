@@ -10,7 +10,12 @@ from .track import log_experiment
 from .explain import explain_with_shap
 
 from .predict import export_scores_csv, score_employees_weekly
-from .dashboard import build_risk_dashboard
+from .dashboard import build_high_risk_alerts, build_risk_dashboard
+from .monitor import (
+    detect_feature_drift,
+    evaluate_model_calibration,
+    summarize_monitoring_status,
+)
 
 __all__ = [
     "train_baseline_models",
@@ -22,4 +27,8 @@ __all__ = [
     "score_employees_weekly",
     "export_scores_csv",
     "build_risk_dashboard",
+    "build_high_risk_alerts",
+    "detect_feature_drift",
+    "evaluate_model_calibration",
+    "summarize_monitoring_status",
 ]
