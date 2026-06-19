@@ -1,123 +1,116 @@
-# README.md
-
 # Employee Churn with Sentiment Analysis
 
-This project aims to predict employee churn by combining structured HR data (e.g., tenure, promotions, performance) with unstructured textual feedback from performance reviews, surveys, and exit interviews. We use natural language processing (NLP) to extract sentiment and emotional signals, improving early detection of disengagement.
+This repository packages a small end-to-end churn modeling workflow that combines structured HR attributes with sentiment and emotion features extracted from employee feedback.
 
-## 🔍 Objective
+It currently covers:
+- data loading, cleaning, anonymization, and column validation
+- structured feature engineering for tenure, promotions, and team size
+- sentiment scoring with VADER and lightweight lexicon-based emotion features
+- baseline, NLP-only, and combined churn models
+- experiment logging with MLflow
+- SHAP-based explainability
+- weekly risk scoring, CSV export, risk ranking, alert thresholds, drift checks, and calibration summaries
+- a minimal Streamlit dashboard and CLI scripts for training, scoring, and evaluation
 
-To identify at-risk employees before they leave by leveraging emotional and behavioral signals, allowing HR and managers to take timely action.
-
-## 📦 Features
-
-- Churn prediction models using structured and unstructured data
-- Sentiment and emotion analysis on employee feedback
-- Feature engineering on career progression, team dynamics, and satisfaction
-- Explainable outputs for HR decision-making
-- Early warning dashboards for high-risk top performers
-
-## 📁 Project Structure
+## Project Layout
 
 ```text
 employee-churn-sentiment/
-├── data/
-├── notebooks/
-├── src/
+├── employee_churn/
 │   ├── data/
 │   ├── features/
 │   ├── models/
-│   ├── inference/
-│   ├── visualization/
-│   └── tracking/
-├── tests/
+│   └── nlp/
 ├── scripts/
+│   ├── dashboard_app.py
+│   ├── evaluate_model.py
+│   ├── predict_risk.py
+│   └── train_model.py
+├── tests/
 ├── README.md
-└── ROADMAP.md
+├── ROADMAP.md
+└── pyproject.toml
 ```
 
-## 🚀 Getting Started
-
-1. Clone this repository.
-2. Install dependencies via Poetry:
+## Installation
 
 ```bash
 poetry install
 ```
 
-3. Run the first notebook:
+## Main Workflows
+
+Train and save a baseline artifact:
 
 ```bash
-jupyter lab notebooks/01_eda.ipynb
+python -m scripts.train_model data/train.csv target artifacts/model.pkl
 ```
 
-## 📊 Tech Stack
-
-- Python, scikit-learn, XGBoost
-- spaCy, NLTK, VADER, BERTopic
-- SHAP, MLflow or Weights & Biases
-- Streamlit (optional dashboard)
-
-## 📄 License
-
-MIT License (see `LICENSE` file)# README.md
-
-# Employee Churn with Sentiment Analysis
-
-This project aims to predict employee churn by combining structured HR data (e.g., tenure, promotions, performance) with unstructured textual feedback from performance reviews, surveys, and exit interviews. We use natural language processing (NLP) to extract sentiment and emotional signals, improving early detection of disengagement.
-
-## 🔍 Objective
-
-To identify at-risk employees before they leave by leveraging emotional and behavioral signals, allowing HR and managers to take timely action.
-
-## 📦 Features
-
-- Churn prediction models using structured and unstructured data
-- Sentiment and emotion analysis on employee feedback
-- Feature engineering on career progression, team dynamics, and satisfaction
-- Explainable outputs for HR decision-making
-- Early warning dashboards for high-risk top performers
-
-## 📁 Project Structure
-
-```text
-employee-churn-sentiment/
-├── data/
-├── notebooks/
-├── src/
-│   ├── data/
-│   ├── features/
-│   ├── models/
-│   ├── inference/
-│   ├── visualization/
-│   └── tracking/
-├── tests/
-├── scripts/
-├── README.md
-└── ROADMAP.md
-```
-
-## 🚀 Getting Started
-
-1. Clone this repository.
-2. Install dependencies via Poetry:
+Train a combined structured + text model:
 
 ```bash
-poetry install
+python -m scripts.train_model data/train.csv target artifacts/model.pkl --text-column feedback
 ```
 
-3. Run the first notebook:
+Score weekly churn risk from a saved artifact:
 
 ```bash
-jupyter lab notebooks/01_eda.ipynb
+python -m scripts.predict_risk artifacts/model.pkl data/score.csv employee_id snapshot_date outputs/scores.csv
 ```
 
-## 📊 Tech Stack
+Evaluate a saved artifact on labeled data:
 
-- Python, scikit-learn, XGBoost
-- spaCy, NLTK, VADER, BERTopic
-- SHAP, MLflow or Weights & Biases
-- Streamlit (optional dashboard)
+```bash
+python -m scripts.evaluate_model artifacts/model.pkl data/eval.csv --output-json outputs/metrics.json
+```
 
-## 📄 License
+Run the dashboard:
 
-MIT License (see `LICENSE` file)
+```bash
+streamlit run scripts/dashboard_app.py
+```
+
+## Package Highlights
+
+`employee_churn.data`
+
+- `load.py`: CSV ingestion helpers for HR and feedback data
+- `clean.py`: column normalization and text anonymization
+- `validate.py`: required-column validation
+
+`employee_churn.features`
+
+- `engineer_structured.py`: tenure, days since promotion, and team size features
+
+`employee_churn.nlp`
+
+- `sentiment.py`: VADER-based sentiment scoring
+- `emotion.py`: simple lexicon-based emotion features
+
+`employee_churn.models`
+
+- `train.py`: baseline, NLP-only, and combined training helpers plus evaluation metrics
+- `predict.py`: weekly risk scoring and CSV export
+- `dashboard.py`: ranking and threshold-based high-risk alerts
+- `monitor.py`: feature drift, calibration metrics, and monitoring summary helpers
+- `track.py`: MLflow experiment logging
+- `explain.py`: SHAP explanation generation
+
+## Testing
+
+Run the test suite with:
+
+```bash
+pytest
+```
+
+The roadmap is currently complete through deployment and monitoring in [ROADMAP.md](ROADMAP.md).
+
+## Notes
+
+- The anonymization and emotion extraction logic is intentionally lightweight and should be treated as baseline functionality.
+- The CLI flow stores a pickled model artifact with metadata about feature preparation so scoring and evaluation stay consistent with training.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
