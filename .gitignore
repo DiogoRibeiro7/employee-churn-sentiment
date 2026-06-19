@@ -1,4 +1,33 @@
+# Python bytecode and caches
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Virtual environments and local env files
 .venv/
+venv/
+env/
 .env
+.env.*
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Notebook and benchmark artifacts
+.ipynb_checkpoints/
+.benchmarks/
+
+# Build and packaging outputs
+build/
+dist/
+*.egg-info/
+
+# Tooling and editor state
+.idea/
+.vscode/
+
+# ML experiment outputs
+mlruns/
