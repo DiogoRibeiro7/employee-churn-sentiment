@@ -82,7 +82,16 @@ EDA = [
         "**what drives churn** before any modeling. The data is generated with a "
         "fixed seed, so every figure below is reproducible. The headline question: "
         "*do structured HR attributes or the free-text feedback carry the churn "
-        "signal?*"
+        "signal?*\n\n"
+        "### Contents\n"
+        "1. [Dataset overview & class balance](#overview)\n"
+        "2. [Data-quality check](#quality)\n"
+        "3. [Univariate distributions](#univariate)\n"
+        "4. [Churn by segment + significance tests](#segments)\n"
+        "5. [Correlation structure](#correlation)\n"
+        "6. [Tenure dynamics](#tenure)\n"
+        "7. [The text signal: sentiment, emotion & word frequency](#text)\n"
+        "8. [Takeaways](#takeaways)"
     ),
     code(BOOTSTRAP),
     code(
@@ -93,7 +102,8 @@ EDA = [
         "df.head()"
     ),
     md(
-        "## Dataset shape and class balance\n\n"
+        '<a id="overview"></a>\n'
+        "## 1 · Dataset shape and class balance\n\n"
         "The sample has **1,500 employees** and **14 raw columns** spanning "
         "demographics, tenure/promotion dates, compensation, satisfaction and "
         "performance scores, and a free-text `feedback` field. The target "
@@ -111,7 +121,59 @@ EDA = [
         "plt.tight_layout(); plt.show()"
     ),
     md(
-        "## Churn by department and gender\n\n"
+        '<a id="quality"></a>\n'
+        "## 2 · Data-quality check\n\n"
+        "Before trusting any chart, confirm the data is clean: missing values, "
+        "duplicates, and obviously invalid ranges."
+    ),
+    code(
+        "quality = pd.DataFrame({\n"
+        "    'dtype': df.dtypes.astype(str),\n"
+        "    'n_missing': df.isna().sum(),\n"
+        "    'pct_missing': (df.isna().mean() * 100).round(2),\n"
+        "    'n_unique': df.nunique(),\n"
+        "})\n"
+        "display(quality)\n"
+        "print('duplicate rows:', int(df.duplicated().sum()))\n"
+        "print('negative tenure rows:',\n"
+        "      int((pd.to_datetime(df['last_promotion_date']) < pd.to_datetime(df['hire_date'])).sum()))"
+    ),
+    md(
+        "**Clean bill of health.** The synthetic generator produces **zero missing "
+        "values, zero duplicate rows**, and no promotion-before-hire violations — "
+        "so the rest of the analysis needs no imputation. (Real HRIS extracts are "
+        "rarely this tidy; the package's `data.clean`/`data.validate` helpers exist "
+        "precisely to enforce these checks on live data.)"
+    ),
+    md(
+        '<a id="univariate"></a>\n'
+        "## 3 · Univariate distributions\n\n"
+        "How is each numeric driver distributed, and does its shape differ between "
+        "churners and stayers?"
+    ),
+    code(
+        "num_cols = ['age', 'monthly_salary', 'satisfaction_score',\n"
+        "            'performance_score', 'overtime_hours', 'num_promotions']\n"
+        "fig, axes = plt.subplots(2, 3, figsize=(13, 6.5))\n"
+        "for ax, col in zip(axes.ravel(), num_cols):\n"
+        "    for label, color in [(0, '#4c72b0'), (1, '#c44e52')]:\n"
+        "        sns.histplot(df.loc[df['churned'] == label, col], ax=ax, color=color,\n"
+        "                     alpha=0.5, kde=True, stat='density', label=f'churned={label}')\n"
+        "    ax.set_title(col); ax.set_xlabel(''); ax.legend(fontsize=7)\n"
+        "fig.suptitle('Numeric feature distributions by churn outcome', y=1.02)\n"
+        "plt.tight_layout(); plt.show()"
+    ),
+    md(
+        "**Reading the grid.** Most distributions overlap heavily between the two "
+        "classes — `age`, `monthly_salary`, `num_promotions`, and `overtime_hours` "
+        "look nearly identical regardless of outcome. The clearest visible shift is "
+        "in **`satisfaction_score`**, where churners lean lower, and a milder shift "
+        "in `performance_score`. We quantify these impressions with hypothesis "
+        "tests below rather than eyeballing them."
+    ),
+    md(
+        '<a id="segments"></a>\n'
+        "## 4 · Churn by department and gender\n\n"
         "Breaking churn down by categorical segments reveals only **mild** "
         "structural variation."
     ),
@@ -137,6 +199,42 @@ EDA = [
         "gender spread in mind: it is small here, yet we will see in notebook 04 "
         "that the *model* amplifies it into a four-fifths-rule failure."
     ),
+    md(
+        "### Are these differences statistically significant?\n\n"
+        "Eyeballing rates is not enough. We run **Mann–Whitney U** tests for each "
+        "numeric feature (churned vs retained distributions) and **chi-square** "
+        "tests of independence for the categorical segments."
+    ),
+    code(
+        "from scipy import stats\n"
+        "num_cols = ['satisfaction_score', 'performance_score', 'overtime_hours',\n"
+        "            'num_promotions', 'age', 'monthly_salary']\n"
+        "ch, rt = df[df['churned'] == 1], df[df['churned'] == 0]\n"
+        "rows = []\n"
+        "for c in num_cols:\n"
+        "    u, p = stats.mannwhitneyu(ch[c], rt[c])\n"
+        "    rows.append({'feature': c, 'p_value': p,\n"
+        "                 'significant_(p<0.05)': p < 0.05})\n"
+        "mw = pd.DataFrame(rows).sort_values('p_value').reset_index(drop=True)\n"
+        "display(mw)\n"
+        "for cat in ['department', 'gender']:\n"
+        "    chi2, p, _, _ = stats.chi2_contingency(pd.crosstab(df[cat], df['churned']))\n"
+        "    print(f'chi-square {cat:11s}: p = {p:.4f}'\n"
+        "          f\"  ({'significant' if p < 0.05 else 'NOT significant'})\")"
+    ),
+    md(
+        "**This is a pivotal result.** Only **`satisfaction_score` (p ≈ 0) and "
+        "`performance_score` (p ≈ 0.007)** differ significantly between churners "
+        "and stayers; overtime is borderline (p ≈ 0.08) and salary/age/promotions "
+        "are not significant. Crucially, **neither `department` (p ≈ 0.08) nor "
+        "`gender` (p ≈ 0.21) is significantly associated with churn.**\n\n"
+        "Hold onto the gender result: in the data, gender carries *no* statistically "
+        "detectable churn signal — yet notebook 04 shows the trained model still "
+        "flags genders at materially different rates. That gap between *data* and "
+        "*model* behaviour is exactly why a dedicated fairness audit is "
+        "non-negotiable."
+    ),
+    md('<a id="correlation"></a>\n' "## 5 · Correlation structure"),
     code(
         "num = df.select_dtypes('number').drop(columns=['employee_id', 'team_id'])\n"
         "corr = num.corrwith(df['churned']).drop('churned').sort_values()\n"
@@ -156,6 +254,49 @@ EDA = [
         "struggle. This is the central motivation for mining the feedback text."
     ),
     code(
+        "fig, ax = plt.subplots(figsize=(7.5, 6))\n"
+        "sns.heatmap(num.assign(churned=df['churned']).corr(), annot=True, fmt='.2f',\n"
+        "            cmap='RdBu_r', center=0, square=True, cbar_kws={'shrink': 0.8},\n"
+        "            annot_kws={'size': 7}, ax=ax)\n"
+        "ax.set_title('Correlation matrix (structured features + churn)')\n"
+        "plt.tight_layout(); plt.show()"
+    ),
+    md(
+        "**No multicollinearity surprises.** The off-diagonal correlations are all "
+        "near zero, so the structured features are largely independent — there is "
+        "no redundant pair to prune, but also no structured feature combination "
+        "that obviously interacts. The `churned` row/column is pale across the "
+        "board, visually reinforcing that the structured block is a weak predictor "
+        "set on its own."
+    ),
+    md(
+        '<a id="tenure"></a>\n'
+        "## 6 · Tenure dynamics\n\n"
+        "Churn risk is often highly non-linear in tenure, which is why the package "
+        "buckets it into ordinal bands. Does risk vary across the career stage?"
+    ),
+    code(
+        "from employee_churn.features.engineer_structured import (\n"
+        "    add_career_progression_features, add_tenure_bands)\n"
+        "tf = add_career_progression_features(df, 'hire_date', 'last_promotion_date')\n"
+        "tf = add_tenure_bands(tf)\n"
+        "band = tf.groupby('tenure_band', observed=True)['churned'].agg(['mean', 'size'])\n"
+        "display(band.round(3))\n\n"
+        "fig, ax = plt.subplots(figsize=(6, 3.4))\n"
+        "band['mean'].plot.bar(ax=ax, color='#dd8452')\n"
+        "ax.axhline(df['churned'].mean(), ls='--', c='k', lw=1, label='overall')\n"
+        "ax.set_title('Churn rate by tenure band'); ax.set_ylabel('churn rate')\n"
+        "ax.tick_params(axis='x', rotation=0); ax.legend()\n"
+        "plt.tight_layout(); plt.show()"
+    ),
+    md(
+        "**A gentle senior-tenure uptick.** Risk is essentially flat for the 1–3y "
+        "and 3–7y bands (~0.44) and rises modestly for **7y+ employees (~0.49)** — "
+        "consistent with long-tenure staff who have stagnated (note `days_since_"
+        "promotion` was the strongest *structured* model feature in notebook 03). "
+        "The effect is real but small; tenure alone will not carry a model."
+    ),
+    code(
         "from employee_churn.nlp.sentiment import add_sentiment_scores\n"
         "from employee_churn.nlp.emotion import add_emotion_features\n"
         "t = add_sentiment_scores(df, 'feedback')\n"
@@ -173,7 +314,8 @@ EDA = [
         "print('mean emo polarity', t.groupby('churned')['emotion_polarity'].mean().round(3).to_dict())"
     ),
     md(
-        "## The text tells the story\n\n"
+        '<a id="text"></a>\n'
+        "## 7 · The text tells the story\n\n"
         "Now the signal is obvious. **Retained employees average a clearly "
         "positive sentiment (~+0.27) while churners average negative (~−0.12)** — "
         "the two distributions visibly separate. The lexicon-based `emotion_polarity` "
@@ -185,15 +327,54 @@ EDA = [
         "thesis the modeling notebook will confirm quantitatively."
     ),
     md(
+        "### Which words distinguish the two groups?\n\n"
+        "Using the package's `nlp.preprocessing` pipeline (clean → tokenize → "
+        "stopword removal), we count the most frequent content words in each "
+        "group's feedback."
+    ),
+    code(
+        "from collections import Counter\n"
+        "from employee_churn.nlp.preprocessing import preprocess\n\n"
+        "def top_words(texts, n=10):\n"
+        "    counter = Counter()\n"
+        "    for txt in texts:\n"
+        "        counter.update(preprocess(txt))\n"
+        "    return pd.Series(dict(counter.most_common(n)))\n\n"
+        "churn_words = top_words(df.loc[df['churned'] == 1, 'feedback'])\n"
+        "stay_words = top_words(df.loc[df['churned'] == 0, 'feedback'])\n"
+        "fig, axes = plt.subplots(1, 2, figsize=(12, 4))\n"
+        "churn_words.sort_values().plot.barh(ax=axes[0], color='#c44e52')\n"
+        "axes[0].set_title('Top words — churned')\n"
+        "stay_words.sort_values().plot.barh(ax=axes[1], color='#4c72b0')\n"
+        "axes[1].set_title('Top words — retained')\n"
+        "plt.tight_layout(); plt.show()"
+    ),
+    md(
+        "**The vocabulary splits cleanly.** Churners' feedback is dominated by "
+        "`workload`, hedging/neutral language (`no`, `strong`, `feelings`, "
+        "`either`, `way` — the 'no strong feelings either way' register of "
+        "disengagement), while retained employees write about `recognition`, "
+        "`trust`, `leadership`, `team`, and `happy`. The presence of explicitly "
+        "positive relational words on the retained side — and their near-absence "
+        "on the churn side — is exactly the signal VADER and the emotion lexicon "
+        "pick up. A future transformer-based encoder (on the roadmap) would capture "
+        "this even more richly."
+    ),
+    md(
+        '<a id="takeaways"></a>\n'
         "## Takeaways\n\n"
-        "1. The target is ~balanced (45% churn) — use AUC/F1/precision@k, not "
-        "accuracy.\n"
-        "2. Structured features are individually weak (best |r| ≈ 0.17, "
-        "satisfaction).\n"
-        "3. **Text-derived sentiment and emotion are the strongest separators** — "
-        "the modeling notebook should weight them heavily.\n"
-        "4. A small raw gender gap exists; we must audit whether the model "
-        "amplifies it (notebook 04)."
+        "1. **Data is clean** (no missing/duplicate/invalid rows) and the target is "
+        "~balanced (45% churn) — use AUC/F1/precision@k, not accuracy.\n"
+        "2. Only **`satisfaction_score` and `performance_score`** are statistically "
+        "significant structured drivers; salary, age, promotions, department, and "
+        "**gender are not** (chi-square p ≈ 0.21).\n"
+        "3. Structured features are individually weak (best |r| ≈ 0.17) and "
+        "mutually uncorrelated — no single one is decisive.\n"
+        "4. **Text-derived sentiment, emotion, and vocabulary are the strongest "
+        "separators** — the modeling notebook should (and does) weight them "
+        "heavily.\n"
+        "5. Gender shows **no significant raw association** with churn, so any "
+        "model-level gender disparity is model-induced — audited in notebook 04."
     ),
 ]
 
@@ -207,7 +388,17 @@ MODELING = [
         "Building on the EDA, this notebook trains the full model zoo, compares "
         "them with cross-validation, tunes the strongest tree model, inspects "
         "calibration, and reads feature importances. Every step uses the same "
-        "reproducible feature matrix."
+        "reproducible feature matrix.\n\n"
+        "### Contents\n"
+        "1. [Feature matrix](#matrix)\n"
+        "2. [Model zoo + cross-validation](#zoo)\n"
+        "3. [Tuning the carried-forward model](#tuning)\n"
+        "4. [Discrimination: ROC & PR](#roc)\n"
+        "5. [Operating threshold selection](#threshold)\n"
+        "6. [Cumulative gains & lift (business view)](#lift)\n"
+        "7. [Calibration](#calibration)\n"
+        "8. [Feature importance: impurity vs permutation](#importance)\n"
+        "9. [Takeaways](#takeaways)"
     ),
     code(BOOTSTRAP),
     code(FEATURE_BLOCK),
@@ -304,6 +495,78 @@ MODELING = [
         "20 highest-risk employees, **~70% truly churned** — a strong shortlist "
         "for retention conversations even though the global AUC is modest."
     ),
+    md(
+        '<a id="threshold"></a>\n'
+        "## 5 · Choosing an operating threshold\n\n"
+        "The default 0.5 cutoff is rarely optimal. Sweeping the threshold shows the "
+        "precision/recall trade-off and the F1-maximizing operating point."
+    ),
+    code(
+        "from sklearn.metrics import precision_score, recall_score, f1_score\n"
+        "ths = np.linspace(0.1, 0.9, 33)\n"
+        "prec = [precision_score(y_te, proba >= t, zero_division=0) for t in ths]\n"
+        "rec = [recall_score(y_te, proba >= t) for t in ths]\n"
+        "f1s = [f1_score(y_te, proba >= t) for t in ths]\n"
+        "best_t = ths[int(np.argmax(f1s))]\n\n"
+        "fig, ax = plt.subplots(figsize=(7, 4))\n"
+        "ax.plot(ths, prec, label='precision', color='#4c72b0')\n"
+        "ax.plot(ths, rec, label='recall', color='#dd8452')\n"
+        "ax.plot(ths, f1s, label='F1', color='#c44e52', lw=2.5)\n"
+        "ax.axvline(best_t, ls='--', c='k', lw=1, label=f'best F1 @ {best_t:.2f}')\n"
+        "ax.set_xlabel('decision threshold'); ax.set_ylabel('score')\n"
+        "ax.set_title('Metrics vs decision threshold'); ax.legend()\n"
+        "plt.tight_layout(); plt.show()\n"
+        "print(f'F1 at 0.50 = {f1_score(y_te, proba >= 0.5):.3f} | '\n"
+        "      f'best F1 = {max(f1s):.3f} at threshold {best_t:.2f}')"
+    ),
+    md(
+        "**Lowering the bar pays off.** F1 peaks at **~0.71 at a threshold of "
+        "0.35**, well above the ~0.56 F1 the default 0.5 cutoff delivers. Because a "
+        "missed departure is costly, HR would deliberately run the model at a "
+        "*lower* threshold to trade some precision for materially higher recall — "
+        "the exact point is a business call about the cost of a missed departure "
+        "versus an unnecessary retention conversation."
+    ),
+    md(
+        '<a id="lift"></a>\n'
+        "## 6 · Cumulative gains & lift\n\n"
+        "For a fixed outreach budget, the operational question is: *if we contact "
+        "the top X% of the risk ranking, what share of real churners do we catch, "
+        "and how much better is that than random?*"
+    ),
+    code(
+        "order = np.argsort(-proba)\n"
+        "y_sorted = y_te.values[order]\n"
+        "pcts = np.arange(1, len(y_sorted) + 1) / len(y_sorted)\n"
+        "gains = np.cumsum(y_sorted) / y_sorted.sum()\n"
+        "base = y_te.mean()\n"
+        "decile_capture = y_sorted[: int(0.1 * len(y_sorted))].mean()\n\n"
+        "fig, axes = plt.subplots(1, 2, figsize=(12, 4))\n"
+        "axes[0].plot(pcts, gains, color='#c44e52', lw=2, label='model')\n"
+        "axes[0].plot([0, 1], [0, 1], ls='--', c='gray', label='random')\n"
+        "axes[0].set_xlabel('fraction contacted (high to low risk)')\n"
+        "axes[0].set_ylabel('fraction of churners captured')\n"
+        "axes[0].set_title('Cumulative gains'); axes[0].legend()\n"
+        "lift = (np.cumsum(y_sorted) / np.arange(1, len(y_sorted) + 1)) / base\n"
+        "axes[1].plot(pcts, lift, color='#4c72b0', lw=2)\n"
+        "axes[1].axhline(1.0, ls='--', c='gray', label='random (lift=1)')\n"
+        "axes[1].set_xlabel('fraction contacted')\n"
+        "axes[1].set_ylabel('lift over base rate'); axes[1].set_title('Lift curve')\n"
+        "axes[1].legend(); plt.tight_layout(); plt.show()\n"
+        "print(f'Top 10% capture rate = {decile_capture:.1%} '\n"
+        "      f'(lift {decile_capture / base:.2f}x over the {base:.1%} base rate)')\n"
+        "print(f'Top 30% captures {gains[int(0.3*len(y_sorted)) - 1]:.1%} of all churners')"
+    ),
+    md(
+        "**Strong targeting value.** The top risk decile churns at **~76% — a "
+        "~1.7x lift** over the 45% base rate — and contacting the **top 30% of the "
+        "ranking captures ~47% of all churners**. The gains curve bows well above "
+        "the diagonal across the whole range. So even with a middling AUC, the "
+        "model is genuinely useful as a *prioritization* tool, which is how "
+        "retention programs actually run (finite outreach capacity, ranked "
+        "worklist)."
+    ),
+    md('<a id="calibration"></a>'),
     code(
         "from employee_churn.models.calibrate import calibration_improvement, reliability_curve\n"
         "calib = calibration_improvement(best, X_tr, y_tr, X_te, y_te)\n"
@@ -330,16 +593,17 @@ MODELING = [
         "small samples, or simply keep the raw probabilities and monitor ECE over "
         "time."
     ),
+    md('<a id="importance"></a>'),
     code(
         "imp = pd.Series(best.feature_importances_, index=X.columns).sort_values()\n"
         "fig, ax = plt.subplots(figsize=(7, 5))\n"
         "imp.tail(12).plot.barh(ax=ax, color='#55a868')\n"
-        "ax.set_title('Top 12 random-forest feature importances')\n"
+        "ax.set_title('Top 12 random-forest impurity importances')\n"
         "plt.tight_layout(); plt.show()\n"
         "imp.sort_values(ascending=False).head(8).round(3)"
     ),
     md(
-        "## What the model actually uses\n\n"
+        "## 8 · What the model actually uses\n\n"
         "The importance ranking validates the EDA decisively: the **top two "
         "features are `emotion_polarity` and `sentiment`** (~0.14 each), with "
         "`text_char_count` and individual emotions (`emotion_joy`, `emotion_anger`, "
@@ -350,14 +614,49 @@ MODELING = [
         "roadmap) rather than collecting more structured HR fields."
     ),
     md(
+        "### Cross-checking with permutation importance\n\n"
+        "Impurity importances are biased toward high-cardinality features, so we "
+        "confirm the ranking with **permutation importance** — how much held-out "
+        "ROC-AUC drops when each feature is shuffled. This is model-agnostic and "
+        "measured on data the model never trained on."
+    ),
+    code(
+        "from sklearn.inspection import permutation_importance\n"
+        "perm = permutation_importance(\n"
+        "    best, X_te, y_te, n_repeats=10, random_state=0, scoring='roc_auc')\n"
+        "perm_imp = pd.Series(perm.importances_mean, index=X.columns).sort_values()\n"
+        "fig, ax = plt.subplots(figsize=(7, 5))\n"
+        "perm_imp.tail(10).plot.barh(\n"
+        "    ax=ax, color='#8172b3',\n"
+        "    xerr=perm.importances_std[perm_imp.tail(10).index.map(list(X.columns).index)])\n"
+        "ax.set_title('Top 10 permutation importances (ROC-AUC drop)')\n"
+        "ax.set_xlabel('mean AUC decrease when shuffled')\n"
+        "plt.tight_layout(); plt.show()\n"
+        "perm_imp.sort_values(ascending=False).head(6).round(4)"
+    ),
+    md(
+        "**The text signal survives a stricter test.** Permutation importance "
+        "again puts **`emotion_polarity` and `sentiment` on top** (AUC drops of "
+        "~0.011 and ~0.008 when shuffled). It also re-ranks a couple of structured "
+        "features upward relative to impurity importance — `performance_score` and "
+        "`salary_peer_zscore` now appear in the top six — a useful reminder that "
+        "the two methods disagree at the margins and that **peer-relative pay** "
+        "carries more genuine signal than raw salary did in the EDA. The headline "
+        "is unchanged: text features are the backbone of the model."
+    ),
+    md(
+        '<a id="takeaways"></a>\n'
         "## Takeaways\n\n"
         "1. Models cluster around **0.70 CV AUC / 0.74 hold-out**; logistic "
         "regression is competitive with the trees.\n"
-        "2. **Precision@20 ≈ 0.70** makes the model useful for targeted outreach "
-        "despite the modest global AUC.\n"
-        "3. **Calibration did not help** on this sample size — verify, don't "
+        "2. **Precision@20 ≈ 0.70** and a **~1.7x top-decile lift** make the model "
+        "useful for targeted outreach despite the modest global AUC.\n"
+        "3. The **F1-optimal threshold is ~0.35**, not 0.5 — tune the operating "
+        "point to the cost of a missed departure.\n"
+        "4. **Calibration did not help** on this sample size — verify, don't "
         "assume.\n"
-        "4. **Text features dominate importances**, confirming the EDA thesis."
+        "5. **Text features dominate** both impurity and permutation importance, "
+        "confirming the EDA thesis."
     ),
 ]
 
@@ -371,7 +670,14 @@ FAIRNESS = [
         "A churn model that flags protected groups at different rates is a legal "
         "and ethical liability. This notebook audits group fairness across gender "
         "and uses SHAP to explain *why* the model scores employees as it does — "
-        "both at the population level and for individuals."
+        "both at the population level and for individuals.\n\n"
+        "### Contents\n"
+        "1. [Group fairness audit](#audit)\n"
+        "2. [Four-fifths-rule verdict](#verdict)\n"
+        "3. [Mitigation: group-aware thresholds](#mitigation)\n"
+        "4. [Global explanations (SHAP)](#global)\n"
+        "5. [Individual explanations](#individual)\n"
+        "6. [Takeaways](#takeaways)"
     ),
     code(BOOTSTRAP),
     code(FEATURE_BLOCK),
@@ -390,6 +696,7 @@ FAIRNESS = [
         "print('test employees:', len(y_te))"
     ),
     md(
+        '<a id="audit"></a>\n'
         "## Group fairness audit\n\n"
         "We compare, per gender, the **selection rate** (share flagged high-risk), "
         "**true-positive rate** (recall — equal opportunity), and false-positive "
@@ -408,6 +715,7 @@ FAIRNESS = [
         "{k: (round(v, 3) if isinstance(v, float) else v) for k, v in summary.items()}"
     ),
     md(
+        '<a id="verdict"></a>\n'
         "## The model fails the four-fifths rule\n\n"
         "This is the most important finding in the whole analysis. The "
         "**disparate-impact ratio is ≈ 0.64**, well below the **0.80 four-fifths "
@@ -415,17 +723,67 @@ FAIRNESS = [
         "least-flagged group (nonbinary) is selected at only ~64% the rate of the "
         "most-flagged group (female), and the equal-opportunity gap (difference in "
         "recall across groups) is ~0.18.\n\n"
-        "Recall from the EDA that the *raw* gender gap in churn was only a few "
-        "points. The model has **amplified** a small population difference into a "
-        "materially disparate selection rate. Deploying this as-is could "
-        "systematically under- or over-target retention resources by gender.\n\n"
-        "**Mitigations to consider:** drop or audit features proxying for gender, "
-        "apply group-specific thresholds to equalize selection rates, add a "
-        "fairness constraint / post-processing step (e.g. equalized odds), and "
-        "always keep a human in the loop. Fairness should be re-checked on every "
-        "retrain because, as shown here, it does not follow from a 'fair-looking' "
-        "dataset."
+        "Recall from the EDA that the *raw* gender association with churn was **not "
+        "even statistically significant** (chi-square p ≈ 0.21). The model has "
+        "**manufactured** a materially disparate selection rate from a signal that "
+        "is not reliably in the data — almost certainly by leaning on features that "
+        "correlate with gender. Deploying this as-is could systematically under- or "
+        "over-target retention resources by gender."
     ),
+    md(
+        '<a id="mitigation"></a>\n'
+        "## Mitigation: group-aware thresholds\n\n"
+        "One of the simplest, most transparent post-processing fixes is to choose a "
+        "**separate decision threshold per group** so that every group is flagged "
+        "at the same rate (demographic-parity post-processing). We target the "
+        "overall selection rate and re-audit."
+    ),
+    code(
+        "target = (best.predict_proba(X_te)[:, 1] >= 0.5).mean()\n"
+        "proba_te = best.predict_proba(X_te)[:, 1]\n"
+        "adj = np.zeros(len(y_te), dtype=int)\n"
+        "thresholds = {}\n"
+        "for g in np.unique(sensitive.values):\n"
+        "    m = sensitive.values == g\n"
+        "    thr = np.quantile(proba_te[m], 1 - target)\n"
+        "    thresholds[g] = round(float(thr), 3)\n"
+        "    adj[m] = (proba_te[m] >= thr).astype(int)\n"
+        "print('per-group thresholds:', thresholds)\n\n"
+        "adj_report = group_fairness_report(y_te.values, adj, sensitive.values)\n"
+        "before = fairness_summary(report)\n"
+        "after = fairness_summary(adj_report)\n"
+        "compare = pd.DataFrame({\n"
+        "    'before (single 0.5)': [before['disparate_impact_ratio'],\n"
+        "                            before['equal_opportunity_difference'],\n"
+        "                            before['passes_four_fifths']],\n"
+        "    'after (group thresholds)': [after['disparate_impact_ratio'],\n"
+        "                                 after['equal_opportunity_difference'],\n"
+        "                                 after['passes_four_fifths']],\n"
+        "}, index=['disparate_impact_ratio', 'equal_opportunity_difference',\n"
+        "          'passes_four_fifths'])\n"
+        "display(compare)\n\n"
+        "fig, ax = plt.subplots(figsize=(7, 3.6))\n"
+        "x = np.arange(len(adj_report))\n"
+        "ax.bar(x - 0.2, report.set_index('group').loc[adj_report['group'], 'selection_rate'],\n"
+        "       0.4, label='before', color='#c44e52')\n"
+        "ax.bar(x + 0.2, adj_report['selection_rate'], 0.4, label='after', color='#55a868')\n"
+        "ax.set_xticks(x); ax.set_xticklabels(adj_report['group'])\n"
+        "ax.set_title('Selection rate by gender — before vs after mitigation')\n"
+        "ax.set_ylabel('selection rate'); ax.legend()\n"
+        "plt.tight_layout(); plt.show()"
+    ),
+    md(
+        "**The fix works — with a caveat.** Group-aware thresholds (female ≈ 0.59, "
+        "male ≈ 0.53, nonbinary ≈ 0.47) equalize selection rates near the ~28% "
+        "target, lifting the disparate-impact ratio from **0.64 → ~0.97 (now "
+        "passes)** and collapsing the equal-opportunity gap from **0.18 → ~0.02**. "
+        "The caveat is ethical and legal, not technical: applying different "
+        "thresholds by a protected attribute is itself a regulated decision and "
+        "may not be permissible in every jurisdiction. Treat this as one tool among "
+        "several (alongside feature auditing and reweighing) and involve legal/HR "
+        "stakeholders before adopting it."
+    ),
+    md('<a id="global"></a>'),
     code(
         "from employee_churn.models.explain import explain_with_shap\n"
         "sample = X_te.head(150)\n"
@@ -458,6 +816,7 @@ FAIRNESS = [
         "plt.tight_layout(); plt.show()"
     ),
     md(
+        '<a id="individual"></a>\n'
         "## Individual explanations enable action\n\n"
         "For each flagged employee the signed SHAP bars show **which factors push "
         "their risk up (red) versus down (blue)**. This is what makes the score "
@@ -469,14 +828,17 @@ FAIRNESS = [
         "turn the model from a surveillance tool into a support tool."
     ),
     md(
+        '<a id="takeaways"></a>\n'
         "## Takeaways\n\n"
         "1. **The model fails the four-fifths rule (DI ≈ 0.64)** and must be "
         "mitigated before any deployment.\n"
-        "2. A small dataset gender gap was **amplified** by the model — audit "
-        "fairness on every retrain.\n"
-        "3. SHAP confirms **text features dominate**, and enables per-employee, "
+        "2. Gender was **not** a significant churn driver in the data, yet the "
+        "model manufactured a disparity — audit fairness on every retrain.\n"
+        "3. **Group-aware thresholds restore parity** (DI 0.64 → ~0.97), but using "
+        "a protected attribute in the decision is itself legally sensitive.\n"
+        "4. SHAP confirms **text features dominate** and enables per-employee, "
         "actionable explanations.\n"
-        "4. Pair every score with its explanation and a human decision-maker."
+        "5. Pair every score with its explanation and a human decision-maker."
     ),
 ]
 

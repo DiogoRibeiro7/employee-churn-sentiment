@@ -30,9 +30,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`features.feature_store`).
 - End-to-end walkthrough notebook and deterministic builder.
 - Three deep-dive, fully executed analysis notebooks with written
-  interpretation: exploratory data analysis (02), modeling and evaluation
-  (03), and fairness and explainability (04), plus their builder
-  (`notebooks/build_notebooks.py`).
+  interpretation and tables of contents: exploratory data analysis (02 —
+  data-quality checks, hypothesis tests, correlation heatmap, tenure and
+  word-frequency analysis), modeling and evaluation (03 — threshold selection,
+  cumulative gains/lift, permutation importance), and fairness and
+  explainability (04 — group-aware threshold mitigation taking disparate impact
+  from 0.64 to 0.97), plus their builder (`notebooks/build_notebooks.py`).
 - Model card (`docs/model_card.md`) and contributor guide (`CONTRIBUTING.md`).
 
 ### Changed
