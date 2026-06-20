@@ -8,6 +8,7 @@ from .engineer_structured import (
     add_tenure_bands,
 )
 from .engineer_text import add_text_statistics, text_statistics
+from .feature_store import FeatureStore, default_feature_store
 
 __all__ = [
     "add_career_progression_features",
@@ -17,4 +18,6 @@ __all__ = [
     "add_compensation_features",
     "add_text_statistics",
     "text_statistics",
+    "FeatureStore",
+    "default_feature_store",
 ]

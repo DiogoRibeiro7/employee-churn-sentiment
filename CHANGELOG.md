@@ -24,6 +24,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Comprehensive evaluation report combining discrimination, calibration, and
   fairness (`models.evaluate`).
 - Filesystem model registry with versioning (`models.registry`).
+- Text preprocessing pipeline: cleaning, tokenization, stopword removal,
+  normalization (`nlp.preprocessing`).
+- Central feature-transform registry with on-disk caching
+  (`features.feature_store`).
 - End-to-end walkthrough notebook and deterministic builder.
 - Model card (`docs/model_card.md`) and contributor guide (`CONTRIBUTING.md`).
 

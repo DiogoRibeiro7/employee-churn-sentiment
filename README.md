@@ -121,11 +121,13 @@ streamlit run scripts/dashboard_app.py
 
 - `engineer_structured.py`: tenure, tenure bands, days since promotion, promotion velocity, peer-relative compensation, and team size features
 - `engineer_text.py`: shape-based text statistics (length, punctuation, negation, lexical diversity)
+- `feature_store.py`: central feature-transform registry with optional on-disk caching
 
 `employee_churn.nlp`
 
 - `sentiment.py`: VADER-based sentiment scoring
 - `emotion.py`: Plutchik eight-emotion lexicon features with intensity, polarity, and dominant emotion
+- `preprocessing.py`: text cleaning, tokenization, stopword removal, and normalization
 
 `employee_churn.models`
 
