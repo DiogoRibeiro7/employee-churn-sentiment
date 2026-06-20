@@ -35,8 +35,8 @@ employee-churn-sentiment/
 │   └── model_card.md
 ├── notebooks/
 │   ├── build_walkthrough.py
-│   └── exploratory/
-│       └── 01_churn_modeling_walkthrough.ipynb
+│   ├── build_notebooks.py
+│   └── exploratory/        # 01 walkthrough + 02 EDA, 03 modeling, 04 fairness
 ├── tests/
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
@@ -142,15 +142,33 @@ streamlit run scripts/dashboard_app.py
 - `track.py`: MLflow experiment logging
 - `explain.py`: SHAP explanation generation (linear and tree models)
 
-## Example Notebook
+## Notebooks
 
-An end-to-end walkthrough — synthetic data, feature engineering, the model zoo
-with cross-validation, tuning, calibration, fairness diagnostics, and SHAP — is
-in [notebooks/exploratory/01_churn_modeling_walkthrough.ipynb](notebooks/exploratory/01_churn_modeling_walkthrough.ipynb).
-It runs anywhere with no real data. Regenerate it deterministically with:
+The [notebooks/exploratory/](notebooks/exploratory/) directory holds runnable,
+**fully executed** analyses (outputs committed) on a reproducible synthetic
+dataset — no real data required. Each contains charts plus written analysis of
+the results:
+
+- [01_churn_modeling_walkthrough.ipynb](notebooks/exploratory/01_churn_modeling_walkthrough.ipynb)
+  — end-to-end tour (data → features → model zoo → tuning → calibration →
+  fairness → SHAP).
+- [02_exploratory_data_analysis.ipynb](notebooks/exploratory/02_exploratory_data_analysis.ipynb)
+  — what drives churn; shows structured features are weak (best |r| ≈ 0.17)
+  while text sentiment/emotion cleanly separate the classes.
+- [03_modeling_and_evaluation.ipynb](notebooks/exploratory/03_modeling_and_evaluation.ipynb)
+  — model comparison (CV AUC ≈ 0.70), ROC/PR, precision@k ≈ 0.70, an honest
+  calibration result (isotonic does not help here), and feature importances
+  dominated by text features.
+- [04_fairness_and_explainability.ipynb](notebooks/exploratory/04_fairness_and_explainability.ipynb)
+  — a group-fairness audit (the tuned model **fails the four-fifths rule**,
+  disparate impact ≈ 0.64) and SHAP global + per-employee explanations.
+
+Regenerate the notebooks deterministically, then execute them, with:
 
 ```bash
-python notebooks/build_walkthrough.py
+python notebooks/build_walkthrough.py      # notebook 01
+python notebooks/build_notebooks.py        # notebooks 02–04
+jupyter nbconvert --to notebook --execute --inplace notebooks/exploratory/*.ipynb
 ```
 
 ## Testing
