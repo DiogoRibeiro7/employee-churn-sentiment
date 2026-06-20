@@ -25,6 +25,8 @@ from .calibrate import (
     reliability_curve,
 )
 from .fairness import fairness_summary, group_fairness_report
+from .evaluate import evaluate_model, flatten_report
+from .registry import ModelRegistry
 
 __all__ = [
     "train_baseline_models",
@@ -48,4 +50,7 @@ __all__ = [
     "reliability_curve",
     "fairness_summary",
     "group_fairness_report",
+    "evaluate_model",
+    "flatten_report",
+    "ModelRegistry",
 ]

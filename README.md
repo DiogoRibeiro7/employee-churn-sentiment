@@ -30,11 +30,16 @@ employee-churn-sentiment/
 │   ├── evaluate_model.py
 │   ├── predict_risk.py
 │   └── train_model.py
+├── configs/         # model/data/logging YAML
+├── docs/
+│   └── model_card.md
 ├── notebooks/
 │   ├── build_walkthrough.py
 │   └── exploratory/
 │       └── 01_churn_modeling_walkthrough.ipynb
 ├── tests/
+├── CHANGELOG.md
+├── CONTRIBUTING.md
 ├── README.md
 ├── ROADMAP.md
 └── pyproject.toml
@@ -125,8 +130,10 @@ streamlit run scripts/dashboard_app.py
 `employee_churn.models`
 
 - `train.py`: baseline/NLP/combined training, the multi-model zoo, cross-validation, and hyperparameter tuning
+- `evaluate.py`: comprehensive evaluation report (discrimination + calibration + fairness)
 - `calibrate.py`: probability calibration and reliability-curve helpers
 - `fairness.py`: group fairness report and four-fifths-rule summary
+- `registry.py`: filesystem model registry with versioning and a metadata index
 - `predict.py`: weekly risk scoring and CSV export
 - `dashboard.py`: ranking and threshold-based high-risk alerts
 - `monitor.py`: feature drift, calibration metrics, and monitoring summary helpers
