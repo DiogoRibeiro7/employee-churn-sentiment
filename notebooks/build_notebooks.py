@@ -843,6 +843,247 @@ FAIRNESS = [
 ]
 
 
+# --------------------------------------------------------------------------- #
+# Notebook 05 — Business Impact & Retention ROI
+# --------------------------------------------------------------------------- #
+BUSINESS_SETUP = (
+    "from employee_churn.data import make_synthetic_employee_data\n"
+    "from employee_churn.features.engineer_structured import (\n"
+    "    add_career_progression_features, add_tenure_bands,\n"
+    "    add_promotion_velocity, add_compensation_features, add_team_metrics,\n"
+    ")\n"
+    "from employee_churn.features.engineer_text import add_text_statistics\n"
+    "from employee_churn.nlp.sentiment import add_sentiment_scores\n"
+    "from employee_churn.nlp.emotion import add_emotion_features\n"
+    "from employee_churn.models.train import build_model_zoo, tune_hyperparameters\n"
+    "from sklearn.model_selection import train_test_split\n\n"
+    "df = make_synthetic_employee_data(n=1500, seed=42)\n"
+    "f = add_career_progression_features(df, 'hire_date', 'last_promotion_date')\n"
+    "f = add_tenure_bands(f)\n"
+    "f = add_promotion_velocity(f, 'num_promotions')\n"
+    "f = add_compensation_features(f, 'monthly_salary', 'department')\n"
+    "f = add_team_metrics(f, 'team_id')\n"
+    "f = add_sentiment_scores(f, 'feedback')\n"
+    "f = add_emotion_features(f, 'feedback')\n"
+    "f = add_text_statistics(f, 'feedback')\n"
+    "DROP = ['employee_id', 'churned', 'feedback', 'gender', 'department',\n"
+    "        'hire_date', 'last_promotion_date', 'team_id', 'tenure_band',\n"
+    "        'emotion_dominant']\n"
+    "X = f.drop(columns=DROP).select_dtypes(include=['number', 'bool'])\n"
+    "y = f['churned']\n"
+    "idx = np.arange(len(f))\n"
+    "X_tr, X_te, y_tr, y_te, _, i_te = train_test_split(\n"
+    "    X, y, idx, test_size=0.25, random_state=0, stratify=y)\n"
+    "best, _, _ = tune_hyperparameters(\n"
+    "    build_model_zoo(0)['random_forest'], X_tr, y_tr,\n"
+    "    model_name='random_forest', n_iter=5)\n"
+    "best.fit(X_tr, y_tr)\n"
+    "proba = best.predict_proba(X_te)[:, 1]\n"
+    "y_true = y_te.values\n"
+    "base_rate = y_true.mean()\n"
+    "print('held-out employees:', len(y_te), '| churn rate:', round(base_rate, 3))"
+)
+
+BUSINESS = [
+    md(
+        "# 05 · Business Impact & Retention ROI\n\n"
+        "A model is only worth deploying if acting on it **saves more than it "
+        "costs**. This notebook translates the churn scores from notebook 03 into "
+        "dollars: how much a targeted retention program saves, how many employees "
+        "to contact, and how sensitive the answer is to the (uncertain) business "
+        "assumptions.\n\n"
+        "### Contents\n"
+        "1. [Cost model & assumptions](#assumptions)\n"
+        "2. [Expected-value framework & break-even](#breakeven)\n"
+        "3. [How many to contact? Net-savings curve](#curve)\n"
+        "4. [The realistic case: capacity-constrained targeting](#capacity)\n"
+        "5. [Sensitivity analysis](#sensitivity)\n"
+        "6. [Recommendations](#recommendations)"
+    ),
+    code(BOOTSTRAP),
+    code(BUSINESS_SETUP),
+    md(
+        '<a id="assumptions"></a>\n'
+        "## 1 · Cost model & assumptions\n\n"
+        "We attach a dollar value to each decision with three transparent "
+        "assumptions (every organization should plug in its own):\n\n"
+        "| Quantity | Assumption | Rationale |\n"
+        "|---|---|---|\n"
+        "| **Replacement cost** | 50% of annual salary | Industry estimates span "
+        "0.5–2x salary (recruiting, onboarding, lost productivity); we take the "
+        "conservative end. |\n"
+        "| **Intervention cost** | \\$4,000 per employee | Manager time, a "
+        "retention package or development budget. |\n"
+        "| **Effectiveness** | 25% | Share of would-be churners actually retained "
+        "by the intervention. |\n\n"
+        "Replacement cost is **salary-linked per employee**, so losing a "
+        "higher-paid person is correctly treated as more expensive."
+    ),
+    code(
+        "REPLACEMENT_FRAC = 0.5        # of annual salary\n"
+        "INTERVENTION_COST = 4_000.0   # $ per contacted employee\n"
+        "EFFECTIVENESS = 0.25          # P(retain | would-be churner, contacted)\n\n"
+        "annual_salary = f.iloc[i_te]['monthly_salary'].values * 12\n"
+        "replacement_cost = REPLACEMENT_FRAC * annual_salary\n"
+        "print(f'avg annual salary    : ${annual_salary.mean():,.0f}')\n"
+        "print(f'avg replacement cost : ${replacement_cost.mean():,.0f}')\n"
+        "print(f'intervention cost    : ${INTERVENTION_COST:,.0f}')\n"
+        "print(f'effectiveness        : {EFFECTIVENESS:.0%}')"
+    ),
+    md(
+        '<a id="breakeven"></a>\n'
+        "## 2 · Expected-value framework\n\n"
+        "Contacting an employee with churn probability *p* has expected value\n\n"
+        "$$ \\mathbb{E}[\\text{value}] = p \\cdot \\text{effectiveness} \\cdot "
+        "\\text{replacement\\_cost} - \\text{intervention\\_cost}. $$\n\n"
+        "Setting this to zero gives a **break-even churn probability** below which "
+        "intervening loses money on average."
+    ),
+    code(
+        "p_star = INTERVENTION_COST / (EFFECTIVENESS * replacement_cost.mean())\n"
+        "print(f'break-even churn probability p* = {p_star:.3f}')\n"
+        "print(f'employees scored at or above p*: {(proba >= p_star).sum()} of {len(proba)}')"
+    ),
+    md(
+        "**Break-even sits at p\\* ≈ 0.40.** With the average replacement cost "
+        "(~\\$40k), an intervention pays for itself once a person's churn "
+        "probability clears ~40%. About **250 of the 375 held-out employees** "
+        "score above that line — already a hint that a *broad* program is "
+        "justified here, but the ranking tells us whom to prioritize when capacity "
+        "is limited."
+    ),
+    md(
+        '<a id="curve"></a>\n'
+        "## 3 · How many to contact?\n\n"
+        "Walking down the risk ranking, we accumulate the **realized** net savings "
+        "(back-tested against the true churn labels): each contacted employee who "
+        "*actually* churned returns `effectiveness × replacement_cost`; everyone "
+        "contacted costs `intervention_cost`."
+    ),
+    code(
+        "order = np.argsort(-proba)\n"
+        "benefit = np.where(y_true[order] == 1, EFFECTIVENESS * replacement_cost[order], 0.0)\n"
+        "net_model = np.cumsum(benefit - INTERVENTION_COST)\n"
+        "k = np.arange(1, len(y_true) + 1)\n"
+        "exp_random = k * (base_rate * EFFECTIVENESS * replacement_cost.mean()\n"
+        "                  - INTERVENTION_COST)\n"
+        "k_star = int(np.argmax(net_model)) + 1\n\n"
+        "fig, ax = plt.subplots(figsize=(8, 4.5))\n"
+        "ax.plot(k, net_model / 1000, color='#c44e52', lw=2, label='model-ranked')\n"
+        "ax.plot(k, exp_random / 1000, color='#4c72b0', lw=2, ls='--', label='random order')\n"
+        "ax.axvline(k_star, color='k', lw=1, ls=':', label=f'optimal k = {k_star}')\n"
+        "ax.axhline(net_model[-1] / 1000, color='gray', lw=1, ls='--',\n"
+        "           label=f'contact everyone = ${net_model[-1]/1000:,.0f}k')\n"
+        "ax.set_xlabel('employees contacted (high to low risk)')\n"
+        "ax.set_ylabel('cumulative net savings ($k)')\n"
+        "ax.set_title('Net savings vs number contacted'); ax.legend(fontsize=8)\n"
+        "plt.tight_layout(); plt.show()\n"
+        "print(f'optimal: contact top {k_star} -> net ${net_model[k_star-1]:,.0f}')"
+    ),
+    md(
+        "**Two lessons from the curve.** First, the model-ranked curve rises far "
+        "faster than the random-order line — front-loading true churners is exactly "
+        "what a good ranking does. Second, because the intervention here is cheap "
+        "relative to the ~\\$40k replacement cost, the *unconstrained* optimum is "
+        "broad: net savings peak at **~\\$520k around the top ~250 employees**, and "
+        "even contacting everyone stays net-positive. In other words, with these "
+        "assumptions the binding question is not *whether* to act but *whom to "
+        "prioritize first* — which is where a finite budget comes in."
+    ),
+    md(
+        '<a id="capacity"></a>\n'
+        "## 4 · The realistic case: limited capacity\n\n"
+        "HR rarely has the bandwidth to run a meaningful intervention for hundreds "
+        "of people at once. Suppose the budget covers the **top 20%** (75 of 375). "
+        "Where you spend that fixed budget is precisely what the model decides."
+    ),
+    code(
+        "K = int(0.20 * len(y_true))\n"
+        "model_net = net_model[K - 1]\n"
+        "random_net = K * (base_rate * EFFECTIVENESS * replacement_cost.mean()\n"
+        "                  - INTERVENTION_COST)\n"
+        "blanket_net = net_model[-1]\n"
+        "gross = benefit[:K].sum()\n"
+        "roi = gross / (K * INTERVENTION_COST)\n\n"
+        "strategies = pd.Series({\n"
+        "    'model — top 20%': model_net,\n"
+        "    'random — 20%': random_net,\n"
+        "    'blanket — all 100%': blanket_net,\n"
+        "})\n"
+        "fig, ax = plt.subplots(figsize=(7, 3.6))\n"
+        "(strategies / 1000).plot.bar(\n"
+        "    ax=ax, color=['#55a868', '#4c72b0', '#dd8452'])\n"
+        "ax.set_ylabel('net savings ($k)'); ax.set_title('Strategy comparison')\n"
+        "ax.tick_params(axis='x', rotation=15)\n"
+        "plt.tight_layout(); plt.show()\n"
+        "print(f'model top-20%  net = ${model_net:,.0f}  (ROI {roi:.2f}x on spend)')\n"
+        "print(f'random 20%     net = ${random_net:,.0f}')\n"
+        "print(f'blanket 100%   net = ${blanket_net:,.0f}')\n"
+        "print(f'model vs random uplift = ${model_net - random_net:,.0f} '\n"
+        "      f'({model_net / max(random_net, 1):.1f}x)')"
+    ),
+    md(
+        "**This is the model's dollar value.** Given a fixed budget for 75 "
+        "interventions, **model targeting nets ~\\$276k versus ~\\$42k for random "
+        "selection — a 6.6x uplift** — and every \\$1 spent returns ~\\$1.9 in "
+        "avoided replacement cost. Strikingly, the model's top-20% program even "
+        "**beats blanket outreach to all 375 employees (~\\$234k) while contacting "
+        "one-fifth as many people** and burning one-fifth of the manager time. "
+        "Targeting is not just cheaper — under realistic capacity limits it is the "
+        "*better-performing* strategy."
+    ),
+    md(
+        '<a id="sensitivity"></a>\n'
+        "## 5 · Sensitivity analysis\n\n"
+        "The dollar figures hinge on two genuinely uncertain inputs — intervention "
+        "effectiveness and cost. We recompute the optimal net savings across a grid "
+        "to see where the program stops paying off."
+    ),
+    code(
+        "effects = [0.15, 0.25, 0.35]\n"
+        "costs = [2_000, 4_000, 8_000]\n"
+        "grid = np.zeros((len(effects), len(costs)))\n"
+        "for r, e in enumerate(effects):\n"
+        "    for c, ic in enumerate(costs):\n"
+        "        ben = np.where(y_true[order] == 1, e * replacement_cost[order], 0.0)\n"
+        "        grid[r, c] = np.cumsum(ben - ic).max()\n\n"
+        "fig, ax = plt.subplots(figsize=(6.5, 4))\n"
+        "sns.heatmap(grid / 1000, annot=True, fmt=',.0f', cmap='RdYlGn', center=0,\n"
+        "            xticklabels=[f'${c//1000}k' for c in costs],\n"
+        "            yticklabels=[f'{int(e*100)}%' for e in effects], ax=ax,\n"
+        "            cbar_kws={'label': 'optimal net savings ($k)'})\n"
+        "ax.set_xlabel('intervention cost'); ax.set_ylabel('effectiveness')\n"
+        "ax.set_title('Optimal net savings under different assumptions')\n"
+        "plt.tight_layout(); plt.show()"
+    ),
+    md(
+        "**The program is robust except in the worst corner.** Across most of the "
+        "grid the optimal policy still saves six figures, but the value swings "
+        "widely: from **~\\$1.7M** (35% effectiveness, \\$2k intervention) down to "
+        "**roughly break-even or negative** when effectiveness is low (15%) and "
+        "interventions are expensive (\\$8k). The practical implication is that "
+        "**measuring intervention effectiveness is as important as improving the "
+        "model** — a small, well-run pilot to estimate that 15–35% number would "
+        "de-risk the whole program."
+    ),
+    md(
+        '<a id="recommendations"></a>\n'
+        "## 6 · Recommendations\n\n"
+        "1. **Deploy as a ranked worklist, not a blanket alarm.** Under realistic "
+        "capacity limits, model-targeted outreach delivers a ~6.6x uplift over "
+        "random and even beats contacting everyone.\n"
+        "2. **Set the cutoff from economics, not 0.5.** Intervene above the "
+        "break-even probability (~0.40 here), adjusted for available budget.\n"
+        "3. **Instrument effectiveness.** The ROI is most sensitive to how often "
+        "interventions actually work — run a holdout/pilot to measure it.\n"
+        "4. **Pair with the fairness controls from notebook 04** so targeting "
+        "savings are not achieved through disparate treatment.\n"
+        "5. **Revisit the cost assumptions per role/region** — replacement cost is "
+        "salary-linked, so the ranking and the budget should be too."
+    ),
+]
+
+
 def build(name: str, cells: list) -> Path:
     nb = new_notebook(cells=cells)
     nb.metadata["kernelspec"] = {
@@ -862,6 +1103,7 @@ def main() -> None:
         ("02_exploratory_data_analysis.ipynb", EDA),
         ("03_modeling_and_evaluation.ipynb", MODELING),
         ("04_fairness_and_explainability.ipynb", FAIRNESS),
+        ("05_business_impact_and_roi.ipynb", BUSINESS),
     ]:
         print("wrote", build(name, cells))
 

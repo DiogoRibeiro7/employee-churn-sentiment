@@ -161,7 +161,12 @@ the results:
   dominated by text features.
 - [04_fairness_and_explainability.ipynb](notebooks/exploratory/04_fairness_and_explainability.ipynb)
   — a group-fairness audit (the tuned model **fails the four-fifths rule**,
-  disparate impact ≈ 0.64) and SHAP global + per-employee explanations.
+  disparate impact ≈ 0.64), a group-aware threshold mitigation (→ ≈ 0.97), and
+  SHAP global + per-employee explanations.
+- [05_business_impact_and_roi.ipynb](notebooks/exploratory/05_business_impact_and_roi.ipynb)
+  — turns scores into dollars: a cost model, break-even probability, net-savings
+  curve, and a capacity-constrained comparison where model targeting beats
+  random by **6.6×** and even beats blanket outreach, plus a sensitivity grid.
 
 Regenerate the notebooks deterministically, then execute them, with:
 

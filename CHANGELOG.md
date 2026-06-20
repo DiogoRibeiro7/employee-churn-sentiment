@@ -35,7 +35,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   word-frequency analysis), modeling and evaluation (03 — threshold selection,
   cumulative gains/lift, permutation importance), and fairness and
   explainability (04 — group-aware threshold mitigation taking disparate impact
-  from 0.64 to 0.97), plus their builder (`notebooks/build_notebooks.py`).
+  from 0.64 to 0.97), and business impact / retention ROI (05 — cost model,
+  break-even probability, net-savings curve, capacity-constrained targeting
+  with a 6.6x uplift over random, and a sensitivity grid), plus their builder
+  (`notebooks/build_notebooks.py`).
 - Model card (`docs/model_card.md`) and contributor guide (`CONTRIBUTING.md`).
 
 ### Changed
